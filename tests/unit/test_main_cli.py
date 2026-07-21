@@ -26,8 +26,11 @@ def stub_driver(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(results, "pick_first", lambda b, c: _mk("results"))
     monkeypatch.setattr(fare_option, "pick_first_fare", lambda b, c: _mk("fare_option"))
     monkeypatch.setattr(booking_form, "reach_guest_form", lambda b, c: _mk("booking_form"))
+    class StubBrowser:
+        def run(self, script: str) -> str:
+            return ""
     from webpage_translation import main as m
-    monkeypatch.setattr(m, "Browser", lambda: object())  # noqa: E731
+    monkeypatch.setattr(m, "Browser", StubBrowser)  # noqa: E731
 
 
 def test_cli_returns_0_when_no_findings(stub_driver: None, tmp_path: Path):
@@ -51,8 +54,11 @@ def test_cli_returns_3_and_stops_when_homepage_broken(
     monkeypatch.setattr(results, "pick_first", lambda b, c: called.append("r") or _mk("results"))
     monkeypatch.setattr(fare_option, "pick_first_fare", lambda b, c: called.append("fo") or _mk("fare_option"))
     monkeypatch.setattr(booking_form, "reach_guest_form", lambda b, c: called.append("bf") or _mk("booking_form"))
+    class StubBrowser:
+        def run(self, script: str) -> str:
+            return ""
     from webpage_translation import main as m
-    monkeypatch.setattr(m, "Browser", lambda: object())  # noqa: E731
+    monkeypatch.setattr(m, "Browser", StubBrowser)
     rc = cli(["--locale", "th-TH", "--date", "2026-08-31", "--report-root", str(tmp_path)])
     assert rc == 3
     assert called == []  # downstream steps never invoked
@@ -79,8 +85,11 @@ def test_cli_returns_1_when_findings_present(
     monkeypatch.setattr(results, "pick_first", lambda b, c: _mk("results"))
     monkeypatch.setattr(fare_option, "pick_first_fare", lambda b, c: _mk("fare_option"))
     monkeypatch.setattr(booking_form, "reach_guest_form", lambda b, c: _mk("booking_form"))
+    class StubBrowser:
+        def run(self, script: str) -> str:
+            return ""
     from webpage_translation import main as m
-    monkeypatch.setattr(m, "Browser", lambda: object())  # noqa: E731
+    monkeypatch.setattr(m, "Browser", StubBrowser)
     rc = cli(["--locale", "th-TH", "--date", "2026-08-31", "--report-root", str(tmp_path)])
     assert rc == 1
 
