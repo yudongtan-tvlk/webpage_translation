@@ -34,8 +34,12 @@ class Browser:
         raw = self.run(script)
         for line in reversed(raw.strip().splitlines()):
             line = line.strip()
-            if line.startswith("{") or line.startswith("["):
+            if not line:
+                continue
+            try:
                 return json.loads(line)
+            except json.JSONDecodeError:
+                continue
         raise BrowserError(f"no JSON payload in stdout:\n{raw}")
 
     def new_tab(self, url: str) -> None:
