@@ -9,19 +9,22 @@ from webpage_translation.driver.extract import extract_visible_texts
 from webpage_translation.qa.types import PageResult, TextItem
 
 
+_FARE_BUTTON = "[data-testid='button_ticket_option_select_0']"
+_BOOKING_FORM = "[data-testid='view_desktop-flight-booking-form']"
+
+
 def pick_first_fare(browser: Browser, ctx: FlowContext) -> PageResult:
     ctx.screenshots_dir.mkdir(parents=True, exist_ok=True)
     shot = ctx.screenshots_dir / "fare_option.png"
     url = "https://www.traveloka.com/flight/fare-option"
     error: str | None = None
     texts: tuple[TextItem, ...] = ()
-    selector = "[data-testid=fare-card], [data-testid=fare-option-item]"
     try:
-        wait_for_selector(browser, selector)
+        wait_for_selector(browser, _FARE_BUTTON, timeout=30)
         browser.screenshot(shot)
         texts = extract_visible_texts(browser)
-        click_first(browser, selector)
-        browser.wait_for_load()
+        click_first(browser, _FARE_BUTTON)
+        wait_for_selector(browser, _BOOKING_FORM, timeout=60)
     except Exception as exc:
         error = f"fare_option failed: {exc}"
     return PageResult(
