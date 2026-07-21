@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime
 
 from webpage_translation.context import FlowContext
@@ -21,10 +22,13 @@ def _click_by_name(browser: Browser, needle: str) -> None:
 
 
 def _type_into(browser: Browser, placeholder_needle: str, value: str) -> None:
-    script = (
-        f"js('document.querySelectorAll(\"input\").forEach(el => {{ if (el.placeholder && el.placeholder.indexOf({placeholder_needle!r}) >= 0) el.focus(); }})')\n"
-        f"type_text({value!r})\n"
+    needle_js = json.dumps(placeholder_needle)
+    snippet = (
+        "document.querySelectorAll(\"input\").forEach(el => { "
+        f"if (el.placeholder && el.placeholder.indexOf({needle_js}) >= 0) el.focus(); "
+        "})"
     )
+    script = f"js({json.dumps(snippet)})\ntype_text({value!r})\n"
     browser.run(script)
 
 
