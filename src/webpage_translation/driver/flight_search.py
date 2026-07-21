@@ -14,6 +14,9 @@ _LOCALE_PATHS: dict[str, str] = {
     "vi-VN": "vi-vn",
     "zh-CN": "zh-cn",
     "en-SG": "en-sg",
+    "ja-JP": "ja-jp",
+    "ko-KR": "ko-kr",
+    "ms-MY": "ms-my",
 }
 
 

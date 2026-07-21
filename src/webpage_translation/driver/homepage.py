@@ -13,6 +13,9 @@ _LOCALE_URLS: dict[str, str] = {
     "vi-VN": "https://www.traveloka.com/vi-vn/",
     "zh-CN": "https://www.traveloka.com/zh-cn/",
     "en-SG": "https://www.traveloka.com/en-sg/",
+    "ja-JP": "https://www.traveloka.com/ja-jp/",
+    "ko-KR": "https://www.traveloka.com/ko-kr/",
+    "ms-MY": "https://www.traveloka.com/ms-my/",
 }
 
 

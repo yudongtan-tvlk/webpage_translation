@@ -23,12 +23,12 @@ uv sync --extra dev
 uv run webpage-translation --locale th-TH --date 2026-08-31
 ```
 
-Report is written to `./report/<timestamp>/index.html` alongside `data.json`
+Report is written to `./reports/<timestamp>/index.html` alongside `data.json`
 and a `screenshots/` directory.
 
 ## Supported locales
 
-`en-SG`, `id-ID`, `th-TH`, `vi-VN`, `zh-CN`.
+`en-SG`, `id-ID`, `th-TH`, `vi-VN`, `zh-CN`, `ja-JP`, `ko-KR`, `ms-MY`.
 
 ## Exit codes
 

@@ -20,7 +20,7 @@ def _parse(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--locale", required=True)
     p.add_argument("--date", required=True, help="YYYY-MM-DD")
     p.add_argument("--verbose", action="store_true")
-    p.add_argument("--report-root", default="./report")
+    p.add_argument("--report-root", default="./reports")
     return p.parse_args(argv)
 
 
