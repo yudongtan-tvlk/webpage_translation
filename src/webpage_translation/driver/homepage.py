@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from webpage_translation.context import FlowContext
 from webpage_translation.driver.browser import Browser, BrowserError
 from webpage_translation.driver.extract import extract_visible_texts
-from webpage_translation.qa.types import PageResult
+from webpage_translation.qa.types import PageResult, TextItem
 
 _LOCALE_LABELS: dict[str, str] = {
     "th-TH": "ไทย",
