@@ -1,0 +1,4 @@
+This project needs to scrape webpages of a given website and then check the quality of language according to its locale.
+1. Given the homepage of traveloka.com website, choose a non-English locale (currency).
+2. use browser-use to navigate to flight search page, then search an one-way flight from Singapore to Shanghai on August 31. On the search result list page, select the first flight to enter the flight option page. On the flight option page, select the first fare option to enter the booking form page.
+2. For every webpage, scrape its content, fetch all text displayed on the webpage to check if the language of every text the same as the locale. If the text is not consistent with the locale, log the text and print an alert.
