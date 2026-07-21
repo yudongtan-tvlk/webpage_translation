@@ -45,14 +45,17 @@ def cli(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
-    report_dir = Path(args.report_root) / stamp
+    report_root = Path(args.report_root)
+    report_dir = report_root / stamp
     ctx = FlowContext(
         locale=args.locale,
         date=args.date,
-        screenshots_dir=report_dir / "_captures",
+        screenshots_dir=report_root / f"{stamp}-captures",
     )
     try:
         browser = Browser()
+        # Reachability probe — first real subprocess call
+        browser.run("print('probe')")
     except BrowserError as exc:
         logging.error("browser init failed: %s", exc)
         print("hint: run `browser-use --doctor`")
