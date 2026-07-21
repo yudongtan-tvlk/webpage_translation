@@ -6,7 +6,7 @@ from webpage_translation.driver.browser import Browser
 
 
 def wait_for_selector(browser: Browser, selector: str, timeout: float = 15) -> None:
-    script = f"wait_for_selector({selector!r}, timeout={timeout})\n"
+    script = f"wait_for_element({selector!r}, timeout={timeout})\n"
     browser.run(script)
 
 
