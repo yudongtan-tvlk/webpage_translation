@@ -17,7 +17,7 @@ dev = [
 ]
 
 [project.scripts]
-webpage-translation = "webpage_translation.main:cli"
+webpage-translation = "webpage_translation.main:main"
 
 [build-system]
 requires = ["hatchling"]
