@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 from webpage_translation.context import FlowContext
@@ -15,17 +16,22 @@ def _detect_auth_wall(browser: Browser) -> bool:
         "[aria-label*='Sign in' i]",
     ]
     for sel in selectors:
-        found = browser.eval_json(f"js('!!document.querySelector({sel!r})')")
+        sel_js = json.dumps(sel)
+        snippet = f"!!document.querySelector({sel_js})"
+        found = browser.eval_json(f"js({json.dumps(snippet)})")
         if found:
             return True
     return False
 
 
 def _fill_input_by_placeholder(browser: Browser, needle: str, value: str) -> None:
-    script = (
-        f"js('for (const el of document.querySelectorAll(\"input\")) {{ if (el.placeholder && el.placeholder.toLowerCase().indexOf({needle.lower()!r}) >= 0) {{ el.focus(); break; }} }}')\n"
-        f"type_text({value!r})\n"
+    needle_js = json.dumps(needle.lower())
+    snippet = (
+        "for (const el of document.querySelectorAll(\"input\")) { "
+        f"if (el.placeholder && el.placeholder.toLowerCase().indexOf({needle_js}) >= 0) "
+        "{ el.focus(); break; } }"
     )
+    script = f"js({json.dumps(snippet)})\ntype_text({value!r})\n"
     browser.run(script)
 
 
