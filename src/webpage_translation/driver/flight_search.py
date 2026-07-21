@@ -1,47 +1,30 @@
 from __future__ import annotations
 
-import json
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from webpage_translation.context import FlowContext
-from webpage_translation.driver.browser import Browser, BrowserError
+from webpage_translation.driver.actions import wait_for_selector
+from webpage_translation.driver.browser import Browser
 from webpage_translation.driver.extract import extract_visible_texts
 from webpage_translation.qa.types import PageResult, TextItem
 
-_MAX_MONTH_CLICKS = 24
+_LOCALE_PATHS: dict[str, str] = {
+    "th-TH": "th-th",
+    "id-ID": "id-id",
+    "vi-VN": "vi-vn",
+    "zh-CN": "zh-cn",
+    "en-SG": "en-sg",
+}
 
 
-def _click_by_name(browser: Browser, needle: str) -> None:
-    script = (
-        "nodes = cdp('Accessibility.getFullAXTree')['nodes']\n"
-        f"target = next(n for n in nodes if 'backendDOMNodeId' in n and n.get('name', {{}}).get('value', '').find({needle!r}) >= 0)\n"
-        "box = cdp('DOM.getBoxModel', backendNodeId=target['backendDOMNodeId'])['model']['content']\n"
-        "click_at_xy(sum(box[0::2]) / 4, sum(box[1::2]) / 4)\n"
+def _build_search_url(locale: str, origin: str, dest: str, iso_date: str) -> str:
+    path = _LOCALE_PATHS.get(locale, "en-sg")
+    d = datetime.fromisoformat(iso_date).date()
+    date_param = d.strftime("%d-%m-%Y")
+    return (
+        f"https://www.traveloka.com/{path}/flight/fullsearch"
+        f"?ap={origin}.{dest}&dt={date_param}.NA&ps=1.0.0&sc=ECONOMY"
     )
-    browser.run(script)
-
-
-def _type_into(browser: Browser, placeholder_needle: str, value: str) -> None:
-    needle_js = json.dumps(placeholder_needle)
-    snippet = (
-        "document.querySelectorAll(\"input\").forEach(el => { "
-        f"if (el.placeholder && el.placeholder.indexOf({needle_js}) >= 0) el.focus(); "
-        "})"
-    )
-    script = f"js({json.dumps(snippet)})\ntype_text({value!r})\n"
-    browser.run(script)
-
-
-def _navigate_calendar_to(browser: Browser, target: date) -> None:
-    target_month = target.strftime("%Y-%m")
-    for _ in range(_MAX_MONTH_CLICKS):
-        header = browser.eval_json(
-            "js('document.querySelector(\"[data-testid=calendar-header]\")?.innerText || \"\"')"
-        )
-        if isinstance(header, str) and target_month in header:
-            return
-        _click_by_name(browser, "Next month")
-    raise BrowserError(f"calendar could not reach {target}")
 
 
 def search(
@@ -50,26 +33,16 @@ def search(
     *,
     origin: str = "SIN",
     dest: str = "SHA",
-    one_way: bool = True,
+    one_way: bool = True,  # noqa: ARG001 — one-way encoded in URL via ".NA"
 ) -> PageResult:
     ctx.screenshots_dir.mkdir(parents=True, exist_ok=True)
     shot = ctx.screenshots_dir / "flight_search.png"
-    url = "https://www.traveloka.com/flight"
+    url = _build_search_url(ctx.locale, origin, dest, ctx.date)
     error: str | None = None
     texts: tuple[TextItem, ...] = ()
     try:
-        _click_by_name(browser, "Flights")
-        _type_into(browser, "From", origin)
-        _click_by_name(browser, origin)
-        _type_into(browser, "To", dest)
-        _click_by_name(browser, dest)
-        if one_way:
-            _click_by_name(browser, "One Way")
-        target = datetime.fromisoformat(ctx.date).date()
-        _navigate_calendar_to(browser, target)
-        _click_by_name(browser, target.strftime("%d %B %Y"))
-        _click_by_name(browser, "Search Flights")
-        browser.wait_for_load()
+        browser.new_tab(url)
+        wait_for_selector(browser, "[data-testid^='flight-inventory-card-container']", timeout=30)
         browser.screenshot(shot)
         texts = extract_visible_texts(browser)
     except Exception as exc:
