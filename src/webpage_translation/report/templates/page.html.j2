@@ -1,0 +1,37 @@
+<section class="page-block">
+  <h2>{{ p.page.name }}</h2>
+  <p><a href="{{ p.page.url }}">{{ p.page.url }}</a> · {{ p.page.timestamp }}</p>
+  {% if p.page.error %}
+    <p class="error">Error: {{ p.page.error }}</p>
+  {% endif %}
+  <div class="screenshot-wrap" style="position:relative; display:inline-block;">
+    {% if p.page.screenshot %}
+      <img class="page-screenshot" src="screenshots/{{ p.page.screenshot | basename }}" alt="{{ p.page.name }} screenshot" />
+      {% for f in p.findings %}
+        {% set item = p.page.texts | selectattr("selector", "equalto", f.selector) | list | first %}
+        {% if item %}
+          <div title="{{ f.text }} (detected {{ f.detected }})"
+               style="position:absolute; left:{{ item.bbox.x }}px; top:{{ item.bbox.y }}px; width:{{ item.bbox.w }}px; height:{{ item.bbox.h }}px; outline:2px solid red;"></div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <p><em>No screenshot captured.</em></p>
+    {% endif %}
+  </div>
+  <table class="findings">
+    <thead><tr><th>Text</th><th>Detected</th><th>Expected</th><th>Confidence</th><th>Selector</th></tr></thead>
+    <tbody>
+      {% for f in p.findings %}
+        <tr>
+          <td>{{ f.text }}</td>
+          <td>{{ f.detected }}</td>
+          <td>{{ f.expected }}</td>
+          <td>{{ "%.2f" | format(f.confidence) }}</td>
+          <td><code>{{ f.selector }}</code></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5"><em>No findings.</em></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
