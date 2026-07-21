@@ -41,10 +41,9 @@ def open_and_set_locale(browser: Browser, ctx: FlowContext) -> PageResult:
     shot = ctx.screenshots_dir / "homepage.png"
     url = "https://www.traveloka.com/"
     error: str | None = None
-    texts: tuple = ()
+    texts: tuple[TextItem, ...] = ()
     try:
         browser.new_tab(url)
-        browser.wait_for_load()
         for attempt in (1, 2):
             try:
                 _switch_locale(browser, ctx.locale)
