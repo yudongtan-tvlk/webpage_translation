@@ -21,6 +21,6 @@ def test_detect_confident(text: str, expected: str) -> None:
 
 
 def test_detect_unknown_on_gibberish():
-    code, conf = detect("")
+    code, conf = detect("?!")
     assert code == "unknown"
     assert conf == 0.0
