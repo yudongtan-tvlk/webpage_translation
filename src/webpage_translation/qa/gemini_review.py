@@ -23,7 +23,7 @@ from PIL import Image
 from google import genai
 from google.genai import types
 
-DEFAULT_MODEL = "gemini-flash-latest"
+DEFAULT_MODEL = "gemini-3.6-flash"
 MAX_LONG_EDGE = 2000
 
 _LOCALE_NAMES: dict[str, str] = {
@@ -40,6 +40,16 @@ _LOCALE_NAMES: dict[str, str] = {
 
 
 @dataclass(frozen=True, slots=True)
+class QualityDetail:
+    issue: str
+    detail: str
+    fix: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"issue": self.issue, "detail": self.detail, "fix": self.fix}
+
+
+@dataclass(frozen=True, slots=True)
 class GeminiReview:
     page: str
     model: str
@@ -47,6 +57,7 @@ class GeminiReview:
     english_examples: tuple[str, ...]
     quality_score: int  # 1-5
     quality_summary: str
+    quality_detail: tuple[QualityDetail, ...]
     format_issues: tuple[str, ...]
     raw: str  # full JSON text from the model, for the report
 
@@ -58,6 +69,7 @@ class GeminiReview:
             "english_examples": list(self.english_examples),
             "quality_score": self.quality_score,
             "quality_summary": self.quality_summary,
+            "quality_detail": [q.to_dict() for q in self.quality_detail],
             "format_issues": list(self.format_issues),
             "raw": self.raw,
         }
@@ -103,6 +115,8 @@ Judge the page on THREE things:
 2. **Native quality of the target-locale prose.** Is the language natural and idiomatic to a first-language speaker of {locale_name}? Or does it read like machine translation or awkward, literal English mapping?
 3. **Format conventions.** Currency symbol placement, number thousands/decimal separators, date order, time format (12h vs 24h), measurement units, metric-vs-imperial — do they match what a native {locale_name} user expects?
 
+Find as many quality issues as you can. Do not restrict yourself to the summary — enumerate every distinct issue you can spot in `quality_detail`: typos, wrong postpositions/particles, awkward literal translations, unnatural word choices, honorific/register mismatches, terminology inconsistency, truncated strings, unfilled template variables, missing translations, punctuation problems. For each issue, spell out what it is and how a native reviewer would fix it.
+
 Reply with **exactly one JSON object** and nothing else, following this schema:
 ```
 {{
@@ -110,6 +124,14 @@ Reply with **exactly one JSON object** and nothing else, following this schema:
   "english_examples": [<up to 8 verbatim English strings you saw, or []>],
   "quality_score": <integer 1..5, where 5=native and idiomatic, 1=broken>,
   "quality_summary": "<one or two sentences on the target-locale prose quality>",
+  "quality_detail": [
+    {{
+      "issue": "<verbatim problematic text or a short label for the issue>",
+      "detail": "<why it is a problem for a native {locale_name} reader — 1-3 sentences>",
+      "fix": "<concrete recommended replacement or specific instruction for how to fix it>"
+    }}
+    // Include as many entries as you can find. Empty list only if the page is genuinely flawless.
+  ],
   "format_issues": [<0..8 short strings, each describing one convention mismatch e.g. 'dates rendered as MM/DD/YYYY instead of DD/MM/YYYY'>]
 }}
 ```
@@ -160,6 +182,17 @@ def review_page(
         raise RuntimeError(f"unreachable: {last_exc}")
     raw = (response.text or "").strip()
     parsed = _parse_reply(raw)
+    quality_detail: list[QualityDetail] = []
+    for item in parsed.get("quality_detail") or []:
+        if not isinstance(item, dict):
+            continue
+        quality_detail.append(
+            QualityDetail(
+                issue=str(item.get("issue", "")).strip(),
+                detail=str(item.get("detail", "")).strip(),
+                fix=str(item.get("fix", "")).strip(),
+            )
+        )
     return GeminiReview(
         page=page_name,
         model=model,
@@ -167,6 +200,7 @@ def review_page(
         english_examples=tuple(str(x) for x in (parsed.get("english_examples") or [])),
         quality_score=int(parsed.get("quality_score", 0)),
         quality_summary=str(parsed.get("quality_summary", "")).strip(),
+        quality_detail=tuple(quality_detail),
         format_issues=tuple(str(x) for x in (parsed.get("format_issues") or [])),
         raw=raw,
     )

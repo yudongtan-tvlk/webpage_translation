@@ -38,15 +38,22 @@ def test_write_json_roundtrip(tmp_path: Path):
 
 
 def test_build_payload_attaches_gemini_review():
-    from webpage_translation.qa.gemini_review import GeminiReview
+    from webpage_translation.qa.gemini_review import GeminiReview, QualityDetail
 
     review = GeminiReview(
         page="homepage",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         english_present=True,
         english_examples=("Close", "Copy"),
         quality_score=3,
         quality_summary="mostly Vietnamese, a few English strings leaked.",
+        quality_detail=(
+            QualityDetail(
+                issue="Close",
+                detail="English button label leaked into Vietnamese page",
+                fix="Translate to 'Đóng'",
+            ),
+        ),
         format_issues=("dates in MM/DD/YYYY",),
         raw="{}",
     )
@@ -59,6 +66,8 @@ def test_build_payload_attaches_gemini_review():
     p = payload["pages"][0]
     assert p["gemini_review"]["quality_score"] == 3
     assert p["gemini_review"]["english_examples"] == ["Close", "Copy"]
+    assert p["gemini_review"]["quality_detail"][0]["issue"] == "Close"
+    assert p["gemini_review"]["quality_detail"][0]["fix"] == "Translate to 'Đóng'"
 
 
 def test_build_payload_no_gemini_review_when_page_missing():

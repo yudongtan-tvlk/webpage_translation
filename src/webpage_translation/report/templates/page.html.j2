@@ -60,6 +60,21 @@
           {% endfor %}
         </ul>
       {% endif %}
+      {% if p.gemini_review.quality_detail %}
+        <p><strong>Quality detail ({{ p.gemini_review.quality_detail | length }} issues):</strong></p>
+        <table class="quality-detail">
+          <thead><tr><th>Issue</th><th>Detail</th><th>Recommended fix</th></tr></thead>
+          <tbody>
+            {% for q in p.gemini_review.quality_detail %}
+              <tr>
+                <td><code>{{ q.issue }}</code></td>
+                <td>{{ q.detail }}</td>
+                <td>{{ q.fix }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
       {% if p.gemini_review.format_issues %}
         <p><strong>Format-convention issues:</strong></p>
         <ul>
