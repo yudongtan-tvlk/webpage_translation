@@ -45,12 +45,13 @@ def cli(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    slug = f"{args.locale}-{stamp}"
     report_root = Path(args.report_root)
-    report_dir = report_root / stamp
+    report_dir = report_root / slug
     ctx = FlowContext(
         locale=args.locale,
         date=args.date,
-        screenshots_dir=report_root / f"{stamp}-captures",
+        screenshots_dir=report_root / f"{slug}-captures",
     )
     try:
         browser = Browser()
