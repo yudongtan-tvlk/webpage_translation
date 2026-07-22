@@ -64,18 +64,29 @@ class Browser:
         self.run(script)
 
     def hydrate_scroll(self) -> None:
+        # Step the viewport down through the page in ~600px chunks so lazy /
+        # virtualized regions get a chance to render. Wait for scrollHeight
+        # to stay stable across two consecutive samples before returning.
         script = (
             "import time\n"
             "js('window.scrollTo(0, 0)')\n"
-            "prev = -1\n"
-            "for i in range(30):\n"
-            "    h = js('document.documentElement.scrollHeight')\n"
-            "    if h == prev:\n"
+            "time.sleep(0.4)\n"
+            "step = 600\n"
+            "for i in range(40):\n"
+            "    js('window.scrollBy(0, ' + str(step) + ')')\n"
+            "    time.sleep(0.4)\n"
+            "    y = js('window.scrollY')\n"
+            "    h = js('document.documentElement.scrollHeight - window.innerHeight')\n"
+            "    if y >= h - 5:\n"
             "        break\n"
-            "    prev = h\n"
-            "    js('window.scrollTo(0, document.documentElement.scrollHeight)')\n"
+            "prev_h = -1\n"
+            "for i in range(10):\n"
+            "    h = js('document.documentElement.scrollHeight')\n"
+            "    if h == prev_h:\n"
+            "        break\n"
+            "    prev_h = h\n"
             "    time.sleep(0.6)\n"
             "js('window.scrollTo(0, 0)')\n"
-            "time.sleep(0.4)\n"
+            "time.sleep(0.6)\n"
         )
         self.run(script)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from webpage_translation.context import FlowContext
-from webpage_translation.driver.actions import click_first, wait_for_selector
+from webpage_translation.driver.actions import click_first, wait_for_selector, wait_until_stable
 from webpage_translation.driver.browser import Browser
 from webpage_translation.driver.extract import extract_visible_texts, max_content_bottom
 from webpage_translation.qa.types import PageResult, TextItem
@@ -21,6 +21,9 @@ def pick_first(browser: Browser, ctx: FlowContext) -> PageResult:
     texts: tuple[TextItem, ...] = ()
     try:
         wait_for_selector(browser, _CARD_BUTTON, timeout=30)
+        wait_until_stable(
+            browser, _CARD_BUTTON, interval=0.8, stable_samples=4, timeout=30
+        )
         browser.hydrate_scroll()
         texts = extract_visible_texts(browser)
         browser.screenshot(shot, min_height=max_content_bottom(texts))
