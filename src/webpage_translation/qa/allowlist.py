@@ -10,6 +10,16 @@ _PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^[\d.,]+$"),
     re.compile(r"^[¥$€£฿₫]\s?[\d.,]+$"),
     re.compile(r"^Rp\s?[\d.,]+$"),
+    # ISO 4217 3-letter code + digits, e.g. "THB 4,989.16", "SGD 12", "USD 1,207.00"
+    re.compile(r"^[A-Z]{3}\s+[\d.,]+$"),
+    # Same with locale-native "per unit" tail — currency stays a proper noun.
+    re.compile(r"^[A-Z]{3}\s+[\d.,]+\s*/\s*\S+$"),
+    # Price range: "THB 5,002.84 - THB 39,842.88".
+    re.compile(r"^[A-Z]{3}\s+[\d.,]+\s*-\s*[A-Z]{3}\s+[\d.,]+$"),
+    # Standalone alphanumeric promo codes (uppercase letters/digits, 4-16 chars).
+    re.compile(r"^[A-Z0-9]{4,16}$"),
+    # Locale/currency chip in header, e.g. "THB | TH", "SGD | EN".
+    re.compile(r"^[A-Z]{3}\s*\|\s*[A-Z]{2}$"),
 )
 
 

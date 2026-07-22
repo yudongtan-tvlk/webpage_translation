@@ -21,6 +21,27 @@ from webpage_translation.qa.allowlist import is_allowlisted
     "traveloka",
     "VISA",
     "Mastercard",
+    # ISO 4217 code + price
+    "THB 4,989.16",
+    "USD 1,207.00",
+    "SGD 12",
+    "MYR 1,234.56",
+    # ISO code + price with locale-native /unit suffix
+    "THB 1,232.00/คน",
+    "USD 100/pax",
+    # Price ranges
+    "THB 5,002.84 - THB 39,842.88",
+    "SGD 12 - SGD 24",
+    # locale/currency chip
+    "THB | TH",
+    "SGD | EN",
+    # promo code
+    "TRAVELSGFL",
+    # airlines
+    "China Eastern Airlines",
+    "China Southern Airlines",
+    "Shenzhen Airlines",
+    "Spring Airlines",
 ])
 def test_allowlisted(text: str) -> None:
     assert is_allowlisted(text) is True
@@ -33,6 +54,13 @@ def test_allowlisted(text: str) -> None:
     "SIN to SHA",
     "Free wifi",
     "ค้นหาเที่ยวบิน",
+    # Regular mixed-case English must NOT be swallowed by the promo-code regex.
+    "Search",
+    "SearchFlights",
+    "New Deal",
+    # ISO code without price should still be caught by the plain code regex,
+    # but the ISO-code-plus-price regex must not match a code alone with no digits.
+    "SGD USD",
 ])
 def test_not_allowlisted(text: str) -> None:
     assert is_allowlisted(text) is False
