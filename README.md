@@ -1,6 +1,6 @@
 # webpage-translation
 
-Locale QA for `traveloka.com`. Drives Traveloka's 5-step flight-booking flow
+Locale QA for `traveloka.com`. Drives Traveloka's 4-step flight-booking flow
 under a chosen locale, extracts every visible text on each page, and flags
 strings whose detected language is English on a non-English locale —
 surfacing missing translations, untranslated buttons, and dangling i18n
@@ -66,10 +66,10 @@ the locale/currency chip on the top nav is never clicked.
 1. `homepage` — `https://www.traveloka.com/<locale>/`
 2. `flight_search` — deep-linked
    `/<locale>/flight/fullsearch?ap=SIN.SHA&dt=DD-MM-YYYY.NA&ps=1.0.0&sc=ECONOMY`
-3. `results` — same URL after opening the bundle overlay via
-   `data-testid=flight-inventory-card-button`
-4. `fare_option` — after clicking `button_ticket_option_select_0`
-5. `booking_form` — guest-path booking form, no submission
+3. `fare_option` — opens the bundle overlay for the first flight via
+   `data-testid=flight-inventory-card-button`, scrapes the fare tray
+4. `booking_form` — guest-path booking form (reached by clicking
+   `button_ticket_option_select_0`), no submission
 
 If the homepage fails to load, downstream steps are skipped and the CLI
 exits `3`.
@@ -115,8 +115,7 @@ src/webpage_translation/
 │   ├── extract.py       visible-text DOM walker (document-space bboxes)
 │   ├── homepage.py      /<locale>/ landing page
 │   ├── flight_search.py deep-link flight fullsearch
-│   ├── results.py       card-list overlay
-│   ├── fare_option.py   fare bundle tray
+│   ├── fare_option.py   opens bundle tray + scrapes fare panel
 │   └── booking_form.py  guest booking form
 ├── qa/                  pure language QA (no browser deps)
 │   ├── types.py         frozen dataclasses (BBox, TextItem, PageResult, Finding)

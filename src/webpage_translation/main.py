@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from webpage_translation.context import FlowContext
-from webpage_translation.driver import booking_form, fare_option, flight_search, homepage, results
+from webpage_translation.driver import booking_form, fare_option, flight_search, homepage
 from webpage_translation.driver.browser import Browser, BrowserError
 from webpage_translation.qa.checker import check_page
 from webpage_translation.qa.types import Finding, PageResult
@@ -32,7 +32,6 @@ def _run_flow(
     steps.append(home)
     if home.error is None:
         steps.append(flight_search.search(browser, ctx))
-        steps.append(results.pick_first(browser, ctx))
         steps.append(fare_option.pick_first_fare(browser, ctx))
         steps.append(booking_form.reach_guest_form(browser, ctx))
     return [(page, check_page(page, ctx.locale)) for page in steps]

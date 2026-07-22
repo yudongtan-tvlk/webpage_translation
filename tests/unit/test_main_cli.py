@@ -19,11 +19,9 @@ def stub_driver(monkeypatch: pytest.MonkeyPatch) -> None:
         fare_option,
         flight_search,
         homepage,
-        results,
     )
     monkeypatch.setattr(homepage, "open_and_set_locale", lambda b, c: _mk("homepage"))
     monkeypatch.setattr(flight_search, "search", lambda b, c, **kw: _mk("flight_search"))
-    monkeypatch.setattr(results, "pick_first", lambda b, c: _mk("results"))
     monkeypatch.setattr(fare_option, "pick_first_fare", lambda b, c: _mk("fare_option"))
     monkeypatch.setattr(booking_form, "reach_guest_form", lambda b, c: _mk("booking_form"))
     class StubBrowser:
@@ -46,12 +44,10 @@ def test_cli_returns_3_and_stops_when_homepage_broken(
         fare_option,
         flight_search,
         homepage,
-        results,
     )
     monkeypatch.setattr(homepage, "open_and_set_locale", lambda b, c: _mk("homepage", error="boom"))
     called: list[str] = []
     monkeypatch.setattr(flight_search, "search", lambda b, c, **kw: called.append("fs") or _mk("flight_search"))
-    monkeypatch.setattr(results, "pick_first", lambda b, c: called.append("r") or _mk("results"))
     monkeypatch.setattr(fare_option, "pick_first_fare", lambda b, c: called.append("fo") or _mk("fare_option"))
     monkeypatch.setattr(booking_form, "reach_guest_form", lambda b, c: called.append("bf") or _mk("booking_form"))
     class StubBrowser:
@@ -73,7 +69,6 @@ def test_cli_returns_1_when_findings_present(
         fare_option,
         flight_search,
         homepage,
-        results,
     )
     items = (TextItem(text="Search flights", selector="#s", bbox=BBox(0, 0, 1, 1)),)
     monkeypatch.setattr(homepage, "open_and_set_locale", lambda b, c: PageResult(
@@ -82,7 +77,6 @@ def test_cli_returns_1_when_findings_present(
     monkeypatch.setattr(flight_search, "search", lambda b, c, **kw: PageResult(
         name="flight_search", url="u", timestamp="t", texts=items, screenshot=None, error=None
     ))
-    monkeypatch.setattr(results, "pick_first", lambda b, c: _mk("results"))
     monkeypatch.setattr(fare_option, "pick_first_fare", lambda b, c: _mk("fare_option"))
     monkeypatch.setattr(booking_form, "reach_guest_form", lambda b, c: _mk("booking_form"))
     class StubBrowser:

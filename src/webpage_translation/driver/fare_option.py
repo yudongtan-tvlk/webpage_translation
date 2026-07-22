@@ -9,6 +9,8 @@ from webpage_translation.driver.extract import extract_visible_texts, max_conten
 from webpage_translation.qa.types import PageResult, TextItem
 
 
+_CARD_BUTTON = "[data-testid='flight-inventory-card-button']"
+_BUNDLE_TRAY = "[data-testid='bundle-summary-tray']"
 _FARE_BUTTON = "[data-testid='button_ticket_option_select_0']"
 _BOOKING_FORM = "[data-testid='view_desktop-flight-booking-form']"
 
@@ -20,6 +22,11 @@ def pick_first_fare(browser: Browser, ctx: FlowContext) -> PageResult:
     error: str | None = None
     texts: tuple[TextItem, ...] = ()
     try:
+        # Card-list state persists from flight_search; open the bundle tray
+        # for the first flight, then scrape the fare panel that appears.
+        wait_for_selector(browser, _CARD_BUTTON, timeout=30)
+        click_first(browser, _CARD_BUTTON)
+        wait_for_selector(browser, _BUNDLE_TRAY, timeout=30)
         wait_for_selector(browser, _FARE_BUTTON, timeout=30)
         wait_until_stable(
             browser,

@@ -31,4 +31,4 @@ def test_full_flow_th(tmp_path: Path):
     assert report_dirs, "no report dir with index.html created"
     report = report_dirs[0]
     data = json.loads((report / "data.json").read_text(encoding="utf-8"))
-    assert 1 <= len(data["pages"]) <= 5  # 1 when homepage failed (stop-on-fail), else 5
+    assert 1 <= len(data["pages"]) <= 4  # 1 when homepage failed (stop-on-fail), else 4

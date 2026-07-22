@@ -9,7 +9,6 @@ from webpage_translation.driver.booking_form import reach_guest_form
 from webpage_translation.driver.browser import Browser
 from webpage_translation.driver.fare_option import pick_first_fare
 from webpage_translation.driver.flight_search import search
-from webpage_translation.driver.results import pick_first
 
 
 pytestmark = pytest.mark.skipif(
@@ -17,18 +16,13 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_results_fare_booking_th(tmp_path: Path) -> None:
+def test_fare_and_booking_th(tmp_path: Path) -> None:
     target = (date.today() + timedelta(days=45)).isoformat()
     ctx = FlowContext(locale="th-TH", date=target, screenshots_dir=tmp_path)
     browser = Browser()
 
     fs = search(browser, ctx)
     assert fs.error is None, fs.error
-
-    r = pick_first(browser, ctx)
-    assert r.error is None, r.error
-    assert r.screenshot is not None and r.screenshot.exists()
-    assert len(r.texts) > 20
 
     fo = pick_first_fare(browser, ctx)
     assert fo.error is None, fo.error
