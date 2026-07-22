@@ -36,4 +36,40 @@
       {% endfor %}
     </tbody>
   </table>
+  {% if p.gemini_review %}
+    <div class="gemini-review">
+      <h3>Gemini native-quality review
+        <span class="gemini-score gemini-score-{{ p.gemini_review.quality_score }}">
+          {{ p.gemini_review.quality_score }}/5
+        </span>
+        <small>({{ p.gemini_review.model }})</small>
+      </h3>
+      <p><strong>Summary:</strong> {{ p.gemini_review.quality_summary }}</p>
+      <p><strong>English on page:</strong>
+        {% if p.gemini_review.english_present %}
+          <span class="tag tag-warn">yes</span>
+        {% else %}
+          <span class="tag tag-ok">no</span>
+        {% endif %}
+      </p>
+      {% if p.gemini_review.english_examples %}
+        <p><strong>English examples:</strong></p>
+        <ul>
+          {% for ex in p.gemini_review.english_examples %}
+            <li><code>{{ ex }}</code></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if p.gemini_review.format_issues %}
+        <p><strong>Format-convention issues:</strong></p>
+        <ul>
+          {% for iss in p.gemini_review.format_issues %}
+            <li>{{ iss }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p><strong>Format-convention issues:</strong> <em>none flagged</em></p>
+      {% endif %}
+    </div>
+  {% endif %}
 </section>

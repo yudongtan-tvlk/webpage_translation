@@ -14,3 +14,5 @@ build/
 *.egg-info/
 .python-version
 .claude/scheduled_tasks.lock
+.env
+**/.env

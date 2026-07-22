@@ -9,7 +9,8 @@ from pathlib import Path
 from webpage_translation.context import FlowContext
 from webpage_translation.driver import booking_form, fare_option, flight_search, homepage
 from webpage_translation.driver.browser import Browser, BrowserError
-from webpage_translation.qa.checker import check_page
+from webpage_translation.qa.checker import check_page, normalize_locale
+from webpage_translation.qa.gemini_review import GeminiReview, load_api_key, review_page
 from webpage_translation.qa.types import Finding, PageResult
 from webpage_translation.report.data import build_payload, write_json
 from webpage_translation.report.render import render_report
@@ -21,6 +22,11 @@ def _parse(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--date", required=True, help="YYYY-MM-DD")
     p.add_argument("--verbose", action="store_true")
     p.add_argument("--report-root", default="./reports")
+    p.add_argument(
+        "--gemini-review",
+        action="store_true",
+        help="Also send each screenshot to Gemini Flash for a native-quality review.",
+    )
     return p.parse_args(argv)
 
 
@@ -35,6 +41,45 @@ def _run_flow(
         steps.append(fare_option.pick_first_fare(browser, ctx))
         steps.append(booking_form.reach_guest_form(browser, ctx))
     return [(page, check_page(page, ctx.locale)) for page in steps]
+
+
+def _gemini_reviews(
+    results_out: list[tuple[PageResult, tuple[Finding, ...]]],
+    *,
+    locale: str,
+) -> list[GeminiReview]:
+    api_key = load_api_key()
+    if api_key is None:
+        logging.warning(
+            "gemini-review requested but no GEMINI_KEY / GEMINI_API_KEY found "
+            "(and no src/webpage_translation/.env)"
+        )
+        return []
+    if normalize_locale(locale) == "en":
+        logging.info("skipping gemini-review: locale is English")
+        return []
+    reviews: list[GeminiReview] = []
+    for page, _ in results_out:
+        if page.screenshot is None or not page.screenshot.exists():
+            continue
+        try:
+            review = review_page(
+                page_name=page.name,
+                screenshot=page.screenshot,
+                locale=locale,
+                api_key=api_key,
+            )
+        except Exception as exc:
+            logging.error("gemini-review failed for %s: %s", page.name, exc)
+            continue
+        logging.info(
+            "gemini-review [%s] score=%s english_present=%s",
+            page.name,
+            review.quality_score,
+            review.english_present,
+        )
+        reviews.append(review)
+    return reviews
 
 
 def cli(argv: Sequence[str] | None = None) -> int:
@@ -65,7 +110,12 @@ def cli(argv: Sequence[str] | None = None) -> int:
     except BrowserError as exc:
         logging.error("browser error: %s", exc)
         return 2
-    payload = build_payload(results_out, locale=args.locale, date=args.date)
+    reviews: list[GeminiReview] = []
+    if args.gemini_review:
+        reviews = _gemini_reviews(results_out, locale=args.locale)
+    payload = build_payload(
+        results_out, locale=args.locale, date=args.date, gemini_reviews=reviews
+    )
     render_report(report_dir, payload)
     write_json(report_dir / "data.json", payload)
     findings_total = sum(len(f) for _, f in results_out)

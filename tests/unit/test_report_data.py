@@ -35,3 +35,32 @@ def test_write_json_roundtrip(tmp_path: Path):
     write_json(out, payload)
     loaded = json.loads(out.read_text(encoding="utf-8"))
     assert loaded == payload
+
+
+def test_build_payload_attaches_gemini_review():
+    from webpage_translation.qa.gemini_review import GeminiReview
+
+    review = GeminiReview(
+        page="homepage",
+        model="gemini-2.5-flash",
+        english_present=True,
+        english_examples=("Close", "Copy"),
+        quality_score=3,
+        quality_summary="mostly Vietnamese, a few English strings leaked.",
+        format_issues=("dates in MM/DD/YYYY",),
+        raw="{}",
+    )
+    payload = build_payload(
+        [_result()],
+        locale="th-TH",
+        date="2026-08-31",
+        gemini_reviews=[review],
+    )
+    p = payload["pages"][0]
+    assert p["gemini_review"]["quality_score"] == 3
+    assert p["gemini_review"]["english_examples"] == ["Close", "Copy"]
+
+
+def test_build_payload_no_gemini_review_when_page_missing():
+    payload = build_payload([_result()], locale="th-TH", date="2026-08-31")
+    assert payload["pages"][0]["gemini_review"] is None
