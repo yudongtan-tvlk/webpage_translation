@@ -43,3 +43,15 @@ def test_check_page_flags_english_when_expecting_thai():
 def test_check_page_passes_matching_locale():
     p = _page("นี่คือประโยคภาษาไทยเกี่ยวกับเที่ยวบิน")
     assert check_page(p, "th-TH") == ()
+
+
+def test_check_page_skips_non_english_non_matching_locale():
+    # Chinese text on a Thai page must NOT be flagged — only English is checked.
+    p = _page("这是一句关于航班的中文句子。")
+    assert check_page(p, "th-TH") == ()
+
+
+def test_check_page_returns_empty_when_expected_is_english():
+    # English locale itself: nothing to check.
+    p = _page("Search for flights", "Book now")
+    assert check_page(p, "en-SG") == ()

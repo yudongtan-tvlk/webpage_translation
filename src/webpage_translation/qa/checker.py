@@ -13,12 +13,14 @@ def check_page(page: PageResult, expected_locale: str) -> tuple[Finding, ...]:
     if page.error is not None:
         return ()
     expected = normalize_locale(expected_locale)
+    if expected == "en":
+        return ()
     out: list[Finding] = []
     for item in page.texts:
         if is_allowlisted(item.text):
             continue
         detected, confidence = detect(item.text)
-        if detected == expected:
+        if detected != "en":
             continue
         out.append(
             Finding(
