@@ -4,16 +4,18 @@
   {% if p.page.error %}
     <p class="error">Error: {{ p.page.error }}</p>
   {% endif %}
-  <div class="screenshot-wrap" style="position:relative; display:inline-block;">
+  <div class="screenshot-wrap" style="position:relative; display:inline-block; max-width:100%;">
     {% if p.page.screenshot %}
-      <img class="page-screenshot" src="screenshots/{{ p.page.screenshot | basename }}" alt="{{ p.page.name }} screenshot" />
+      <img class="page-screenshot" src="screenshots/{{ p.page.screenshot | basename }}" alt="{{ p.page.name }} screenshot" style="display:block; max-width:100%; height:auto;" />
+      <div class="overlay-layer" style="position:absolute; inset:0; pointer-events:none; transform-origin:top left;">
       {% for f in p.findings %}
         {% set item = p.page.texts | selectattr("selector", "equalto", f.selector) | list | first %}
         {% if item %}
-          <div title="{{ f.text }} (detected {{ f.detected }})"
-               style="position:absolute; left:{{ item.bbox.x }}px; top:{{ item.bbox.y }}px; width:{{ item.bbox.w }}px; height:{{ item.bbox.h }}px; outline:2px solid red;"></div>
+          <div class="overlay-box" title="{{ f.text }} (detected {{ f.detected }})"
+               style="position:absolute; left:{{ item.bbox.x }}px; top:{{ item.bbox.y }}px; width:{{ item.bbox.w }}px; height:{{ item.bbox.h }}px; outline:2px solid red; pointer-events:auto;"></div>
         {% endif %}
       {% endfor %}
+      </div>
     {% else %}
       <p><em>No screenshot captured.</em></p>
     {% endif %}

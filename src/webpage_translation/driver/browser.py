@@ -51,7 +51,11 @@ class Browser:
     def screenshot(self, path: Path) -> None:
         script = (
             "import base64, pathlib\n"
-            "data = cdp('Page.captureScreenshot', format='png')['data']\n"
+            "m = cdp('Page.getLayoutMetrics')\n"
+            "c = m.get('cssContentSize') or m['contentSize']\n"
+            "clip = {'x': 0, 'y': 0, 'width': c['width'], 'height': c['height'], 'scale': 1}\n"
+            "data = cdp('Page.captureScreenshot', format='png', "
+            "captureBeyondViewport=True, fromSurface=True, clip=clip)['data']\n"
             f"pathlib.Path({str(path)!r}).write_bytes(base64.b64decode(data))\n"
         )
         self.run(script)

@@ -19,5 +19,24 @@
 {% for p in payload.pages %}
   {% include "page.html.j2" %}
 {% endfor %}
+<script>
+function syncOverlays() {
+  document.querySelectorAll(".screenshot-wrap").forEach(wrap => {
+    const img = wrap.querySelector("img.page-screenshot");
+    const layer = wrap.querySelector(".overlay-layer");
+    if (!img || !layer || !img.naturalWidth) return;
+    const scale = img.clientWidth / img.naturalWidth;
+    layer.style.width = img.naturalWidth + "px";
+    layer.style.height = img.naturalHeight + "px";
+    layer.style.transform = "scale(" + scale + ")";
+  });
+}
+window.addEventListener("load", syncOverlays);
+window.addEventListener("resize", syncOverlays);
+document.querySelectorAll("img.page-screenshot").forEach(img => {
+  if (img.complete) syncOverlays();
+  else img.addEventListener("load", syncOverlays);
+});
+</script>
 </body>
 </html>
