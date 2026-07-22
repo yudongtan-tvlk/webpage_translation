@@ -29,9 +29,22 @@ from webpage_translation.qa.allowlist import is_allowlisted
     # ISO code + price with locale-native /unit suffix
     "THB 1,232.00/คน",
     "USD 100/pax",
-    # Price ranges
+    # Price ranges (prefix + postfix currency)
     "THB 5,002.84 - THB 39,842.88",
     "SGD 12 - SGD 24",
+    "3.933.514 VND - 28.025.869 VND",
+    # Postfix currency (Vietnamese style)
+    "3.997.340 VND",
+    "12.958.821 VND",
+    # No-space prefix
+    "VND799.468",
+    "USD100",
+    # Longer promo codes
+    "VIKKIDIGITALBANKWEDJUL",
+    # Stops
+    "1 stop",
+    "2 stops",
+    "2+ stops",
     # locale/currency chip
     "THB | TH",
     "SGD | EN",
