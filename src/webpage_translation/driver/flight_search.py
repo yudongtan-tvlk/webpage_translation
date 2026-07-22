@@ -13,6 +13,7 @@ _LOCALE_PATHS: dict[str, str] = {
     "id-ID": "id-id",
     "vi-VN": "vi-vn",
     "zh-CN": "zh-cn",
+    "zh-EN": "zh-en",
     "en-SG": "en-sg",
     "ja-JP": "ja-jp",
     "ko-KR": "ko-kr",
