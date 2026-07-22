@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from webpage_translation.context import FlowContext
 from webpage_translation.driver.actions import wait_for_selector
 from webpage_translation.driver.browser import Browser
-from webpage_translation.driver.extract import extract_visible_texts
+from webpage_translation.driver.extract import extract_visible_texts, max_content_bottom
 from webpage_translation.qa.types import PageResult, TextItem
 
 _LOCALE_PATHS: dict[str, str] = {
@@ -46,8 +46,9 @@ def search(
     try:
         browser.new_tab(url)
         wait_for_selector(browser, "[data-testid^='flight-inventory-card-container']", timeout=30)
-        browser.screenshot(shot)
+        browser.hydrate_scroll()
         texts = extract_visible_texts(browser)
+        browser.screenshot(shot, min_height=max_content_bottom(texts))
     except Exception as exc:
         error = f"flight_search failed: {exc}"
     return PageResult(

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from webpage_translation.context import FlowContext
 from webpage_translation.driver.actions import click_first, wait_for_selector
 from webpage_translation.driver.browser import Browser
-from webpage_translation.driver.extract import extract_visible_texts
+from webpage_translation.driver.extract import extract_visible_texts, max_content_bottom
 from webpage_translation.qa.types import PageResult, TextItem
 
 
@@ -21,8 +21,9 @@ def pick_first_fare(browser: Browser, ctx: FlowContext) -> PageResult:
     texts: tuple[TextItem, ...] = ()
     try:
         wait_for_selector(browser, _FARE_BUTTON, timeout=30)
-        browser.screenshot(shot)
+        browser.hydrate_scroll()
         texts = extract_visible_texts(browser)
+        browser.screenshot(shot, min_height=max_content_bottom(texts))
         click_first(browser, _FARE_BUTTON)
         wait_for_selector(browser, _BOOKING_FORM, timeout=60)
     except Exception as exc:

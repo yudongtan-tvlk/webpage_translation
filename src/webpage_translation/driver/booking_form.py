@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from webpage_translation.context import FlowContext
 from webpage_translation.driver.browser import Browser
-from webpage_translation.driver.extract import extract_visible_texts
+from webpage_translation.driver.extract import extract_visible_texts, max_content_bottom
 from webpage_translation.qa.types import PageResult, TextItem
 
 
@@ -33,8 +33,9 @@ def reach_guest_form(browser: Browser, ctx: FlowContext) -> PageResult:
     try:
         if _detect_auth_wall(browser):
             error = "auth_wall_hit"
-        browser.screenshot(shot)
+        browser.hydrate_scroll()
         texts = extract_visible_texts(browser)
+        browser.screenshot(shot, min_height=max_content_bottom(texts))
     except Exception as exc:
         error = f"booking_form failed: {exc}"
     return PageResult(

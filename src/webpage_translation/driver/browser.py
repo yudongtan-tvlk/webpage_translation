@@ -48,14 +48,34 @@ class Browser:
     def wait_for_load(self, timeout: float = 30) -> None:
         self.run(f"wait_for_load(timeout={timeout})")
 
-    def screenshot(self, path: Path) -> None:
+    def screenshot(self, path: Path, min_height: float = 0.0) -> None:
         script = (
-            "import base64, pathlib\n"
-            "m = cdp('Page.getLayoutMetrics')\n"
-            "c = m.get('cssContentSize') or m['contentSize']\n"
-            "clip = {'x': 0, 'y': 0, 'width': c['width'], 'height': c['height'], 'scale': 1}\n"
+            "import base64, pathlib, time\n"
+            "js('window.scrollTo(0, 0)')\n"
+            "time.sleep(0.3)\n"
+            "w = js('document.documentElement.scrollWidth')\n"
+            "h = js('document.documentElement.scrollHeight')\n"
+            f"h = max(float(h), {float(min_height)})\n"
+            "clip = {'x': 0, 'y': 0, 'width': float(w), 'height': float(h), 'scale': 1}\n"
             "data = cdp('Page.captureScreenshot', format='png', "
             "captureBeyondViewport=True, fromSurface=True, clip=clip)['data']\n"
             f"pathlib.Path({str(path)!r}).write_bytes(base64.b64decode(data))\n"
+        )
+        self.run(script)
+
+    def hydrate_scroll(self) -> None:
+        script = (
+            "import time\n"
+            "js('window.scrollTo(0, 0)')\n"
+            "prev = -1\n"
+            "for i in range(30):\n"
+            "    h = js('document.documentElement.scrollHeight')\n"
+            "    if h == prev:\n"
+            "        break\n"
+            "    prev = h\n"
+            "    js('window.scrollTo(0, document.documentElement.scrollHeight)')\n"
+            "    time.sleep(0.6)\n"
+            "js('window.scrollTo(0, 0)')\n"
+            "time.sleep(0.4)\n"
         )
         self.run(script)
