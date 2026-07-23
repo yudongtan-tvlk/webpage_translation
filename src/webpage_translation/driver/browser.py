@@ -66,7 +66,12 @@ class Browser:
     def screenshot_region(
         self, path: Path, *, x: float, y: float, width: float, height: float
     ) -> None:
-        """Capture a specific rectangle of the page in document coords."""
+        """Capture a specific rectangle of the page in document coords.
+
+        Does not reset scroll — the caller is expected to have scrolled the
+        target region into or near the viewport so any virtualized content
+        has mounted and painted.
+        """
         clip_dict = {
             "x": float(x),
             "y": float(y),
@@ -75,9 +80,7 @@ class Browser:
             "scale": 1,
         }
         script = (
-            "import base64, pathlib, time\n"
-            "js('window.scrollTo(0, 0)')\n"
-            "time.sleep(0.3)\n"
+            "import base64, pathlib\n"
             f"clip = {clip_dict!r}\n"
             "data = cdp('Page.captureScreenshot', format='png', "
             "captureBeyondViewport=True, fromSurface=True, clip=clip)['data']\n"

@@ -56,8 +56,11 @@ EXTRACT_JS: str = r"""
 """
 
 
-def extract_visible_texts(browser: Browser) -> tuple[TextItem, ...]:
-    browser.run("js('window.scrollTo(0, 0)')\nimport time; time.sleep(0.2)\n")
+def extract_visible_texts(
+    browser: Browser, *, reset_scroll: bool = True
+) -> tuple[TextItem, ...]:
+    if reset_scroll:
+        browser.run("js('window.scrollTo(0, 0)')\nimport time; time.sleep(0.2)\n")
     raw: list[dict[str, Any]] = browser.eval_json(f"js({EXTRACT_JS!r})")
     items: list[TextItem] = []
     for row in raw:

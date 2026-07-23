@@ -100,6 +100,25 @@ _MAX_SUBLINK_CLICKS = 6
 _CARD_VERTICAL_PAD = 8  # extra px above/below to avoid clipping outlines
 
 
+def _scroll_first_card_into_view(browser: Browser) -> None:
+    """Scroll the first flight card just below the top of the viewport
+    so Traveloka's virtualized tab-panel content mounts and paints
+    before we capture or extract."""
+    card_sel = json.dumps(_CARD_CONTAINER)
+    expr = (
+        "(function(){"
+        f"const card=document.querySelector({card_sel});"
+        "if(!card)return null;"
+        "const r=card.getBoundingClientRect();"
+        "window.scrollTo(0, Math.max(0, r.top + window.scrollY - 80));"
+        "return true;"
+        "})()"
+    )
+    browser.eval_json(f"js({expr!r})")
+    # Give React/virtualized regions a moment to mount + paint.
+    time.sleep(1.2)
+
+
 def _first_card_document_rect(browser: Browser) -> tuple[float, float, float, float]:
     """Return the (x, y, width, height) rect of the first flight card in
     document space. Height covers everything from the top of the card
@@ -282,6 +301,7 @@ def _scrape_tab(
     texts: tuple[TextItem, ...] = ()
     try:
         wait_for_selector(browser, _CARD_CONTAINER, timeout=30)
+        _scroll_first_card_into_view(browser)
         candidates = _localized_label(ctx.locale, page_name, english_label)
         if not _click_tab_on_first_card(browser, candidates):
             raise RuntimeError(
@@ -290,12 +310,12 @@ def _scrape_tab(
         time.sleep(1.2)  # let the panel finish animating in
         _click_sublinks_in_panel(browser)
         time.sleep(0.6)
-        browser.hydrate_scroll()
-        full_texts = extract_visible_texts(browser)
-        # Card rect must be sampled AFTER hydrate_scroll + extract have
-        # scrolled the page back to top so bbox coords line up.
+        # Re-scroll: the panel change may have shifted the card, and we
+        # need the card + panel in the viewport so virtualized regions
+        # actually mount and paint.
+        _scroll_first_card_into_view(browser)
+        full_texts = extract_visible_texts(browser, reset_scroll=False)
         rx, ry, rw, rh = _first_card_document_rect(browser)
-        # Pad a few pixels top/bottom so red outlines aren't clipped.
         pad = _CARD_VERTICAL_PAD
         ry = max(0.0, ry - pad)
         rh = rh + 2 * pad
