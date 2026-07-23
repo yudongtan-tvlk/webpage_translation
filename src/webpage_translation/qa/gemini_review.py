@@ -164,10 +164,14 @@ def _generate_with_retry(
     model: str,
     contents: list[Any],
 ) -> tuple[Any, str]:
-    """Return (response, actual_model). Retries transient failures; on 429
-    falls back once to FALLBACK_MODEL."""
+    """Return (response, actual_model). Retries transient failures + empty
+    responses; on 429 falls back once to FALLBACK_MODEL."""
     import time
 
+    config = types.GenerateContentConfig(
+        max_output_tokens=8192,
+        response_mime_type="application/json",
+    )
     tried_models = [model]
     if model != FALLBACK_MODEL:
         tried_models.append(FALLBACK_MODEL)
@@ -176,8 +180,16 @@ def _generate_with_retry(
         for attempt in range(3):
             try:
                 response = client.models.generate_content(
-                    model=model_name, contents=contents
+                    model=model_name, contents=contents, config=config
                 )
+                text = (response.text or "").strip()
+                if not text:
+                    finish_reason = None
+                    if response.candidates:
+                        finish_reason = getattr(response.candidates[0], "finish_reason", None)
+                    raise RuntimeError(
+                        f"empty response from {model_name} (finish_reason={finish_reason})"
+                    )
                 return response, model_name
             except Exception as exc:
                 last_exc = exc
