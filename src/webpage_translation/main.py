@@ -33,20 +33,36 @@ def _parse(argv: Sequence[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Also send each screenshot to Gemini Flash for a native-quality review.",
     )
+    p.add_argument(
+        "--tabs-only",
+        action="store_true",
+        help=(
+            "Only report the 4 in-card tab pages (flight_details, "
+            "fare_benefits, refund, reschedule). Homepage and flight_search "
+            "still run for navigation but are not written to the report."
+        ),
+    )
     return p.parse_args(argv)
 
 
 def _run_flow(
-    browser: Browser, ctx: FlowContext
+    browser: Browser, ctx: FlowContext, *, tabs_only: bool = False
 ) -> list[tuple[PageResult, tuple[Finding, ...]]]:
     steps: list[PageResult] = []
     home = homepage.open_and_set_locale(browser, ctx)
-    steps.append(home)
+    if not tabs_only:
+        steps.append(home)
     if home.error is None:
-        steps.append(flight_search.search(browser, ctx))
+        fs = flight_search.search(browser, ctx)
+        if not tabs_only:
+            steps.append(fs)
         steps.extend(flight_card_tabs.scrape_all_tabs(browser, ctx))
-        steps.append(fare_option.pick_first_fare(browser, ctx))
-        steps.append(booking_form.reach_guest_form(browser, ctx))
+        if not tabs_only:
+            steps.append(fare_option.pick_first_fare(browser, ctx))
+            steps.append(booking_form.reach_guest_form(browser, ctx))
+    elif tabs_only:
+        # Homepage failed but we still need to surface that in the report.
+        steps.append(home)
     return [(page, check_page(page, ctx.locale)) for page in steps]
 
 
@@ -113,7 +129,7 @@ def cli(argv: Sequence[str] | None = None) -> int:
         print("hint: run `browser-use --doctor`")
         return 2
     try:
-        results_out = _run_flow(browser, ctx)
+        results_out = _run_flow(browser, ctx, tabs_only=args.tabs_only)
     except BrowserError as exc:
         logging.error("browser error: %s", exc)
         return 2
