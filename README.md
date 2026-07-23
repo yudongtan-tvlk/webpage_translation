@@ -8,36 +8,94 @@ keys.
 
 ## Prereqs
 
-- macOS with Chrome or Chromium installed
-- `browser-use` CLI on `PATH` (installed globally, e.g.
-  `uv tool install browser-use`)
-- Enable Chrome remote debugging via the `browser-use` skill; if the daemon
-  fails to connect, run `browser-use --doctor` and follow prompts
-- `uv` (`brew install uv`)
+- macOS with Chrome or Chromium installed.
+- `uv` (`brew install uv`).
+- `browser-use` CLI on `PATH`: `uv tool install browser-use` then
+  `browser-use skill install`.
+- Optional (for `--gemini-review`): create
+  `src/webpage_translation/.env` containing
+  `GEMINI_KEY="<your key>"`. The file is gitignored — it never leaves
+  your machine. Paid billing on the Gemini project recommended (the
+  free tier caps at 20 requests/day per model).
 
 ## Install
 
 ```bash
+cd webpage_translation
 uv sync --extra dev
 ```
 
-## Run
+## Running the tool
+
+### 1. Attach Chrome (first run only)
+
+On the first invocation each session, `browser-use` opens
+`chrome://inspect/#remote-debugging` and prompts you to tick
+**"Allow remote debugging for this browser instance"** — click Allow.
+
+Quick verify:
 
 ```bash
-uv run webpage-translation --locale ja-JP --date 2026-09-05
+browser-use <<'PY'
+print(page_info())
+PY
 ```
 
-Options:
+If it hangs or errors with `CDP WS handshake failed`:
 
-- `--locale <bcp47>` (required) — see Supported locales below.
-- `--date YYYY-MM-DD` (required) — outbound departure date used to build
-  the flight-search deep link.
-- `--report-root <dir>` — where reports go. Defaults to `./reports`.
-- `--verbose` — DEBUG-level logging.
+```bash
+pkill -f browser-harness            # kill any stale daemon
+browser-use --doctor                # diagnostics
+# then re-tick Allow in Chrome and rerun the command
+```
+
+### 2. Run one locale
+
+```bash
+uv run webpage-translation --locale th-TH --date 2026-09-05
+```
+
+Prints a summary line and writes a fresh directory
+`./reports/<locale>-<YYYYMMDD-HHMMSS>/` containing `index.html`,
+`data.json`, and `screenshots/*.png`. Open the HTML in a browser:
+
+```bash
+open "$(ls -td reports/*/ | head -1)/index.html"
+```
+
+### 3. Run with Gemini native-quality review
+
+Adds a per-page LLM review (score, issue list, recommended fixes,
+format-convention checks) alongside the regex checker. Requires the
+key from Prereqs.
+
+```bash
+uv run webpage-translation --locale ja-JP --date 2026-09-05 --gemini-review
+```
+
+### 4. Loop over locales
+
+```bash
+DATE=$(python3 -c 'from datetime import date, timedelta; print((date.today()+timedelta(days=45)).isoformat())')
+for LOC in th-TH vi-VN ja-JP ko-KR zh-EN; do
+  uv run webpage-translation --locale "$LOC" --date "$DATE" --gemini-review
+done
+open "$(ls -td reports/*/ | head -1)/index.html"
+```
+
+### All flags
+
+| Flag | Required | Description |
+|---|---|---|
+| `--locale <BCP47>` | yes | see Supported locales below |
+| `--date YYYY-MM-DD` | yes | outbound flight date (used in deep link) |
+| `--report-root <dir>` | no (default `./reports`) | output directory |
+| `--gemini-review` | no | also send screenshots to Gemini |
+| `--verbose` | no | DEBUG-level logging |
 
 Each run writes to `./reports/<locale>-<timestamp>/index.html` alongside
-`data.json` and a `screenshots/` directory. Reports never overwrite; every
-invocation gets a fresh directory.
+`data.json` and a `screenshots/` directory. Reports never overwrite;
+every invocation gets a fresh directory.
 
 ## What it flags
 
@@ -51,6 +109,24 @@ invocation gets a fresh directory.
 Detection uses `lingua-language-detector` with a confidence floor of
 `MIN_CONFIDENCE = 0.5`; anything below is treated as `unknown` and
 skipped.
+
+## Gemini native-quality review (opt-in)
+
+With `--gemini-review`, every screenshot is downscaled (max 2000px long
+edge) and sent to Gemini Flash along with a locale-aware prompt asking
+for:
+
+1. English contamination — any user-facing English strings a native
+   speaker would flag.
+2. Native quality of the target-locale prose — score 1..5, one-sentence
+   summary, and a table of enumerated issues (`quality_detail`) with
+   detail + recommended fix per issue.
+3. Format-convention mismatches — currency placement, number
+   separators, date/time order, measurement units.
+
+Primary model: `gemini-3.6-flash`. Automatically falls back to
+`gemini-flash-latest` on 429 (both share the same project-wide daily
+quota on the free tier; billing recommended).
 
 ## Supported locales
 
@@ -121,7 +197,8 @@ src/webpage_translation/
 │   ├── types.py         frozen dataclasses (BBox, TextItem, PageResult, Finding)
 │   ├── allowlist.py     brand + code + price regex/set filter
 │   ├── detector.py      lingua wrapper (cached)
-│   └── checker.py       per-page finding generator
+│   ├── checker.py       per-page finding generator
+│   └── gemini_review.py Gemini Flash native-quality review (opt-in)
 └── report/              Jinja2 HTML + JSON dumper
     ├── data.py          build_payload + write_json
     ├── render.py        Jinja2 HTML report generator
