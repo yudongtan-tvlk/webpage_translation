@@ -63,6 +63,28 @@ class Browser:
         )
         self.run(script)
 
+    def screenshot_region(
+        self, path: Path, *, x: float, y: float, width: float, height: float
+    ) -> None:
+        """Capture a specific rectangle of the page in document coords."""
+        clip_dict = {
+            "x": float(x),
+            "y": float(y),
+            "width": float(width),
+            "height": float(height),
+            "scale": 1,
+        }
+        script = (
+            "import base64, pathlib, time\n"
+            "js('window.scrollTo(0, 0)')\n"
+            "time.sleep(0.3)\n"
+            f"clip = {clip_dict!r}\n"
+            "data = cdp('Page.captureScreenshot', format='png', "
+            "captureBeyondViewport=True, fromSurface=True, clip=clip)['data']\n"
+            f"pathlib.Path({str(path)!r}).write_bytes(base64.b64decode(data))\n"
+        )
+        self.run(script)
+
     def hydrate_scroll(self) -> None:
         # Step the viewport down through the page in ~600px chunks so lazy /
         # virtualized regions get a chance to render. Wait for scrollHeight

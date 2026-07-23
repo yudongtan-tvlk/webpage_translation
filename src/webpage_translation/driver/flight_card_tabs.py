@@ -23,8 +23,8 @@ from datetime import UTC, datetime
 from webpage_translation.context import FlowContext
 from webpage_translation.driver.actions import wait_for_selector
 from webpage_translation.driver.browser import Browser
-from webpage_translation.driver.extract import extract_visible_texts, max_content_bottom
-from webpage_translation.qa.types import PageResult, TextItem
+from webpage_translation.driver.extract import extract_visible_texts
+from webpage_translation.qa.types import BBox, PageResult, TextItem
 
 _CARD_CONTAINER = "[data-testid^='flight-inventory-card-container']"
 
@@ -97,6 +97,80 @@ _TAB_ORDER: tuple[tuple[str, str], ...] = (
 )
 
 _MAX_SUBLINK_CLICKS = 6
+_CARD_VERTICAL_PAD = 8  # extra px above/below to avoid clipping outlines
+
+
+def _first_card_document_rect(browser: Browser) -> tuple[float, float, float, float]:
+    """Return the (x, y, width, height) rect of the first flight card in
+    document space. Height covers everything from the top of the card
+    down to the bottom of the currently-expanded tab panel — Traveloka
+    renders each card's tab panel inline below the card summary, so the
+    panel is the next-sibling block of the card container's grandparent.
+    We expand the rect to include any content up to the top of the
+    NEXT card container."""
+    card_sel = json.dumps(_CARD_CONTAINER)
+    expr = (
+        "(function(){"
+        f"const cards=document.querySelectorAll({card_sel});"
+        "if(!cards.length)return null;"
+        "const first=cards[0];"
+        "const firstR=first.getBoundingClientRect();"
+        "const doc=document.documentElement;"
+        # Find the next card container: its top is the boundary of the
+        # first card's expanded area.
+        "let nextTop=doc.scrollHeight;"
+        "if(cards.length>1){"
+        "const nextR=cards[1].getBoundingClientRect();"
+        "nextTop=nextR.top+window.scrollY;"
+        "}"
+        "return {"
+        "x: Math.floor(firstR.left+window.scrollX),"
+        "y: Math.floor(firstR.top+window.scrollY),"
+        "width: Math.ceil(firstR.width),"
+        "height: Math.ceil(nextTop-(firstR.top+window.scrollY))"
+        "};"
+        "})()"
+    )
+    rect = browser.eval_json(f"js({expr!r})")
+    if not rect:
+        raise RuntimeError("no flight card found")
+    return (
+        float(rect["x"]),
+        float(rect["y"]),
+        float(rect["width"]),
+        float(rect["height"]),
+    )
+
+
+def _clip_texts_to_region(
+    texts: tuple[TextItem, ...],
+    *,
+    rx: float,
+    ry: float,
+    rw: float,
+    rh: float,
+) -> tuple[TextItem, ...]:
+    """Keep only TextItems whose bbox falls inside [rx, ry, rw, rh],
+    translated to region-local coords so they match a region-clipped
+    screenshot."""
+    out: list[TextItem] = []
+    for t in texts:
+        tx = t.bbox.x
+        ty = t.bbox.y
+        tw = t.bbox.w
+        th = t.bbox.h
+        if tx + tw < rx or tx > rx + rw:
+            continue
+        if ty + th < ry or ty > ry + rh:
+            continue
+        out.append(
+            TextItem(
+                text=t.text,
+                selector=t.selector,
+                bbox=BBox(x=tx - rx, y=ty - ry, w=tw, h=th),
+            )
+        )
+    return tuple(out)
 
 
 def _localized_label(locale: str, page_name: str, english: str) -> tuple[str, ...]:
@@ -217,8 +291,16 @@ def _scrape_tab(
         _click_sublinks_in_panel(browser)
         time.sleep(0.6)
         browser.hydrate_scroll()
-        texts = extract_visible_texts(browser)
-        browser.screenshot(shot, min_height=max_content_bottom(texts))
+        full_texts = extract_visible_texts(browser)
+        # Card rect must be sampled AFTER hydrate_scroll + extract have
+        # scrolled the page back to top so bbox coords line up.
+        rx, ry, rw, rh = _first_card_document_rect(browser)
+        # Pad a few pixels top/bottom so red outlines aren't clipped.
+        pad = _CARD_VERTICAL_PAD
+        ry = max(0.0, ry - pad)
+        rh = rh + 2 * pad
+        texts = _clip_texts_to_region(full_texts, rx=rx, ry=ry, rw=rw, rh=rh)
+        browser.screenshot_region(shot, x=rx, y=ry, width=rw, height=rh)
     except Exception as exc:
         error = f"{page_name} failed: {exc}"
     return PageResult(
