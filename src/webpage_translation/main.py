@@ -7,7 +7,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from webpage_translation.context import FlowContext
-from webpage_translation.driver import booking_form, fare_option, flight_search, homepage
+from webpage_translation.driver import (
+    booking_form,
+    fare_option,
+    flight_card_tabs,
+    flight_search,
+    homepage,
+)
 from webpage_translation.driver.browser import Browser, BrowserError
 from webpage_translation.qa.checker import check_page, normalize_locale
 from webpage_translation.qa.gemini_review import GeminiReview, load_api_key, review_page
@@ -38,6 +44,7 @@ def _run_flow(
     steps.append(home)
     if home.error is None:
         steps.append(flight_search.search(browser, ctx))
+        steps.extend(flight_card_tabs.scrape_all_tabs(browser, ctx))
         steps.append(fare_option.pick_first_fare(browser, ctx))
         steps.append(booking_form.reach_guest_form(browser, ctx))
     return [(page, check_page(page, ctx.locale)) for page in steps]
