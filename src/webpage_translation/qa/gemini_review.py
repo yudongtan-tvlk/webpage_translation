@@ -24,6 +24,7 @@ from google import genai
 from google.genai import types
 
 DEFAULT_MODEL = "gemini-3.6-flash"
+FALLBACK_MODEL = "gemini-flash-latest"
 MAX_LONG_EDGE = 2000
 
 _LOCALE_NAMES: dict[str, str] = {
@@ -152,6 +153,43 @@ def _parse_reply(text: str) -> dict[str, Any]:
     return result
 
 
+def _is_quota_error(exc: BaseException) -> bool:
+    text = str(exc)
+    return "429" in text or "RESOURCE_EXHAUSTED" in text or "quota" in text.lower()
+
+
+def _generate_with_retry(
+    client: genai.Client,
+    *,
+    model: str,
+    contents: list[Any],
+) -> tuple[Any, str]:
+    """Return (response, actual_model). Retries transient failures; on 429
+    falls back once to FALLBACK_MODEL."""
+    import time
+
+    tried_models = [model]
+    if model != FALLBACK_MODEL:
+        tried_models.append(FALLBACK_MODEL)
+    last_exc: Exception | None = None
+    for model_name in tried_models:
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model_name, contents=contents
+                )
+                return response, model_name
+            except Exception as exc:
+                last_exc = exc
+                if _is_quota_error(exc) and model_name != tried_models[-1]:
+                    # Skip remaining retries on this model — go straight to fallback.
+                    break
+                if attempt == 2:
+                    break
+                time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"gemini generate_content failed: {last_exc}") from last_exc
+
+
 def review_page(
     *,
     page_name: str,
@@ -161,25 +199,12 @@ def review_page(
     model: str = DEFAULT_MODEL,
     max_long_edge: int = MAX_LONG_EDGE,
 ) -> GeminiReview:
-    import time
-
     client = genai.Client(api_key=api_key)
     png_bytes = _downscale_png(screenshot, max_long_edge=max_long_edge)
     prompt = _build_prompt(locale)
     image_part = types.Part.from_bytes(data=png_bytes, mime_type="image/png")
     contents: list[Any] = [image_part, prompt]
-    last_exc: Exception | None = None
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(model=model, contents=contents)
-            break
-        except Exception as exc:  # includes transient 503s
-            last_exc = exc
-            if attempt == 2:
-                raise
-            time.sleep(2 * (attempt + 1))
-    else:  # pragma: no cover — for loop always returns via break or raise
-        raise RuntimeError(f"unreachable: {last_exc}")
+    response, actual_model = _generate_with_retry(client, model=model, contents=contents)
     raw = (response.text or "").strip()
     parsed = _parse_reply(raw)
     quality_detail: list[QualityDetail] = []
@@ -195,7 +220,7 @@ def review_page(
         )
     return GeminiReview(
         page=page_name,
-        model=model,
+        model=actual_model,
         english_present=bool(parsed.get("english_present", False)),
         english_examples=tuple(str(x) for x in (parsed.get("english_examples") or [])),
         quality_score=int(parsed.get("quality_score", 0)),
